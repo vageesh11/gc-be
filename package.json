@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "db:migrate": "psql -U $DB_USER -d $DB_NAME -f database/migrations/001_initial_schema.sql",
-    "db:seed": "psql -U $DB_USER -d $DB_NAME -f database/seeds/seed.sql"
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
