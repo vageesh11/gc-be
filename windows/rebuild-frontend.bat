@@ -6,8 +6,9 @@
 
 setlocal
 
-set FE_DIR=C:\gc-fe
-set LOG_DIR=C:\gc-be\logs
+set FE_DIR=C:\Users\Pramod\gc-fe
+set LOG_DIR=C:\Users\Pramod\gc-be\logs
+set NPX="C:\Program Files\nodejs\npx.cmd"
 
 echo ========================================
 echo   Gaming Cafe -- Rebuilding Frontend
@@ -34,7 +35,7 @@ if %ERRORLEVEL% neq 0 (
 :: Step 3: Restart
 echo [3/3] Restarting frontend...
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
-start "" /B cmd /c "cd /d "%FE_DIR%" && npx vite preview --host 0.0.0.0 >> "%LOG_DIR%\frontend.log" 2>&1"
+start "GC-Frontend" /MIN cmd /k "cd /d %FE_DIR% && %NPX% vite preview --host 0.0.0.0 > %LOG_DIR%\frontend.log 2>&1"
 
 echo.
 echo Done! Frontend rebuilt and restarted.

@@ -5,7 +5,7 @@
 
 setlocal
 
-set BE_DIR=C:\gc-be
+set BE_DIR=C:\Users\Pramod\gc-be
 
 set BE_PORT=3000
 for /f "tokens=2 delims==" %%A in ('findstr /i "^PORT=" "%BE_DIR%\.env" 2^>nul') do set BE_PORT=%%A

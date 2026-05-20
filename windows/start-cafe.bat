@@ -1,43 +1,34 @@
 @echo off
 :: ============================================================
 :: Gaming Cafe -- Silent Background Startup
-:: This is called by Task Scheduler on login.
-:: No terminal windows appear. Both servers run in background.
+:: Called by Task Scheduler on login.
 :: ============================================================
 
-setlocal
+:: ── Paths (set to your actual folder locations) ─────────────
+set BE_DIR=C:\Users\Pramod\gc-be
+set FE_DIR=C:\Users\Pramod\gc-fe
+set LOG_DIR=C:\Users\Pramod\gc-be\logs
+set NODE="C:\Program Files\nodejs\node.exe"
+set NPX="C:\Program Files\nodejs\npx.cmd"
 
-:: ── Paths (change these if your folders are in a different drive) ──
-set BE_DIR=C:\gc-be
-set FE_DIR=C:\gc-fe
-set LOG_DIR=C:\gc-be\logs
-
-:: ── Create logs directory if it doesn't exist ──────────────
+:: ── Create logs directory ────────────────────────────────────
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
-:: ── Read PORT from .env (default 3000) ─────────────────────
-set BE_PORT=3000
-for /f "tokens=2 delims==" %%A in ('findstr /i "^PORT=" "%BE_DIR%\.env" 2^>nul') do set BE_PORT=%%A
+:: ── Write startup timestamp ──────────────────────────────────
+echo [%DATE% %TIME%] Gaming Cafe starting... >> "%LOG_DIR%\startup.log"
 
-:: ── Kill any existing node processes on these ports ────────
-for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":%BE_PORT%.*LISTENING"') do (
-    taskkill /PID %%A /F >nul 2>&1
-)
-for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173.*LISTENING"') do (
-    taskkill /PID %%A /F >nul 2>&1
-)
+:: ── Kill anything already on port 3000 or 4173 ──────────────
+for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":3000 "') do taskkill /PID %%A /F >nul 2>&1
+for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173 "') do taskkill /PID %%A /F >nul 2>&1
 
-:: ── Short wait after killing old processes ──────────────────
 timeout /t 2 /nobreak >nul
 
-:: ── Start Backend silently (output goes to log file) ───────
-start "" /B cmd /c "cd /d "%BE_DIR%" && node src\server.js >> "%LOG_DIR%\backend.log" 2>&1"
+:: ── Start Backend ────────────────────────────────────────────
+start "GC-Backend" /MIN cmd /k "%NODE% %BE_DIR%\src\server.js > %LOG_DIR%\backend.log 2>&1"
 
-:: ── Wait for backend to be ready ────────────────────────────
-timeout /t 4 /nobreak >nul
+timeout /t 5 /nobreak >nul
 
-:: ── Start Frontend (serves compiled dist, no source exposed) 
-start "" /B cmd /c "cd /d "%FE_DIR%" && npx vite preview --host 0.0.0.0 >> "%LOG_DIR%\frontend.log" 2>&1"
+:: ── Start Frontend ───────────────────────────────────────────
+start "GC-Frontend" /MIN cmd /k "cd /d %FE_DIR% && %NPX% vite preview --host 0.0.0.0 > %LOG_DIR%\frontend.log 2>&1"
 
-endlocal
-exit
+echo [%DATE% %TIME%] Both servers launched. >> "%LOG_DIR%\startup.log"
