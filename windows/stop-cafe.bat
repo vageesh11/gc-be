@@ -25,5 +25,5 @@ for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173.*LISTENING"') d
 )
 
 echo Done. Both servers stopped.
-timeout /t 2 /nobreak >nul
+ping -n 3 127.0.0.1 >nul
 endlocal

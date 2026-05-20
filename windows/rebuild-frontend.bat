@@ -20,7 +20,7 @@ echo [1/3] Stopping existing frontend...
 for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173.*LISTENING"') do (
     taskkill /PID %%A /F >nul 2>&1
 )
-timeout /t 1 /nobreak >nul
+ping -n 2 127.0.0.1 >nul
 
 :: Step 2: Build
 echo [2/3] Building frontend (this takes ~30 seconds)...
@@ -41,5 +41,5 @@ echo.
 echo Done! Frontend rebuilt and restarted.
 echo Open: http://localhost:4173
 echo.
-timeout /t 3 /nobreak >nul
+ping -n 4 127.0.0.1 >nul
 endlocal
