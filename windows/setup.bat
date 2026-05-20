@@ -7,9 +7,9 @@
 
 setlocal
 
-set BE_DIR=C:\gc-be
-set FE_DIR=C:\gc-fe
-set LOG_DIR=C:\gc-be\logs
+set BE_DIR=C:\Users\Pramod\gc-be
+set FE_DIR=C:\Users\Pramod\gc-fe
+set LOG_DIR=C:\Users\Pramod\gc-be\logs
 
 echo ============================================================
 echo   Gaming Cafe -- Windows Setup
@@ -17,7 +17,7 @@ echo   Run this once on a new machine
 echo ============================================================
 echo.
 
-:: ── Check Node.js ────────────────────────────────────────────
+:: ── Check Node.js ──────────────────────────────────────��─────
 echo [CHECK] Node.js...
 node --version >nul 2>&1
 if %ERRORLEVEL% neq 0 (
@@ -27,7 +27,7 @@ if %ERRORLEVEL% neq 0 (
     pause
     exit /b 1
 )
-echo   Node.js OK: 
+echo   Node.js OK:
 node --version
 
 :: ── Check psql ───────────────────────────────────────────────
@@ -89,39 +89,31 @@ if %ERRORLEVEL% neq 0 (
 )
 echo   Backend dependencies installed.
 
-:: ── Run DB migrations ─────────────────────────────────────────
+:: ── Run DB migrations ────────────────────────────────────────
 echo.
 echo [2/5] Running database migrations...
-set PGPASSWORD=%DB_PASSWORD%
+cd /d "%BE_DIR%"
+node scripts/migrate.js
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Migration failed.
+    pause
+    exit /b 1
+)
+echo   Migrations completed.
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\001_initial_schema.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
-
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\002_feature_additions.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
-
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\003_table_pricing_and_discounts.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
-
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\004_reserved_status.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
-
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\005_payment_method.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
-
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\006_cash_online_amounts.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
-
-echo   All migrations applied.
-
-:: ── Run seeds ─────────────────────────────────────────────────
+:: ── Run seeds ────────────────────────────────────────────────
 echo.
 echo [3/5] Seeding database...
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\seeds\seed.sql"
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\seeds\users.sql"
+cd /d "%BE_DIR%"
+node scripts/seed.js
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Seed failed.
+    pause
+    exit /b 1
+)
 echo   Seed data inserted.
 
-:: ── Install frontend dependencies ─────────────────────────────
+:: ── Install frontend dependencies ────────────────────────────
 echo.
 echo [4/5] Installing frontend dependencies...
 cd /d "%FE_DIR%"
@@ -133,7 +125,7 @@ if %ERRORLEVEL% neq 0 (
 )
 echo   Frontend dependencies installed.
 
-:: ── Build frontend ─────────────────────────────────────────────
+:: ── Build frontend ───────────────────────────────────────────
 echo.
 echo [5/5] Building frontend (compiled, source not exposed)...
 call npm run build
@@ -144,10 +136,10 @@ if %ERRORLEVEL% neq 0 (
 )
 echo   Frontend built.
 
-:: ── Create logs directory ──────────────────────────────────────
+:: ── Create logs directory ────────────────────────────────────
 if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
-:: ── Register Task Scheduler ────────────────────────────────────
+:: ── Register Task Scheduler ──────────────────────────────────
 echo.
 echo [FINAL] Registering auto-start with Task Scheduler...
 schtasks /delete /tn "GamingCafe" /f >nul 2>&1
@@ -159,7 +151,7 @@ if %ERRORLEVEL% neq 0 (
     echo   Auto-start registered. App will start on every login.
 )
 
-:: ── Create Desktop shortcut ─────────────────────────────────────
+:: ── Create Desktop shortcut ──────────────────────────────────
 echo.
 echo [EXTRA] Creating desktop shortcut...
 set SHORTCUT=%USERPROFILE%\Desktop\Gaming Cafe.url
@@ -186,8 +178,3 @@ echo.
 pause
 endlocal
 goto :eof
-
-:migration_error
-echo ERROR: Migration failed. Check PostgreSQL connection and credentials in .env
-pause
-exit /b 1
