@@ -21,12 +21,21 @@ echo [%DATE% %TIME%] Gaming Cafe starting... >> "%LOG_DIR%\startup.log"
 for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":3000 "') do taskkill /PID %%A /F >nul 2>&1
 for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173 "') do taskkill /PID %%A /F >nul 2>&1
 
-timeout /t 2 /nobreak >nul
+:: Wait 2 seconds for any cleanup
+ping -n 3 127.0.0.1 >nul
+
+:: ── Run DB migrations and seeds ──────────────────────────────
+echo [%DATE% %TIME%] Running migrations... >> "%LOG_DIR%\startup.log"
+cd /d "%BE_DIR%"
+%NODE% "%BE_DIR%\scripts\migrate.js" >> "%LOG_DIR%\startup.log" 2>&1
+echo [%DATE% %TIME%] Running seeds... >> "%LOG_DIR%\startup.log"
+%NODE% "%BE_DIR%\scripts\seed.js" >> "%LOG_DIR%\startup.log" 2>&1
 
 :: ── Start Backend ────────────────────────────────────────────
-start "GC-Backend" /MIN cmd /k "%NODE% %BE_DIR%\src\server.js > %LOG_DIR%\backend.log 2>&1"
+start "GC-Backend" /MIN cmd /k "cd /d %BE_DIR% && %NODE% %BE_DIR%\src\server.js > %LOG_DIR%\backend.log 2>&1"
 
-timeout /t 5 /nobreak >nul
+:: Wait 5 seconds for backend to be ready
+ping -n 6 127.0.0.1 >nul
 
 :: ── Start Frontend ───────────────────────────────────────────
 start "GC-Frontend" /MIN cmd /k "cd /d %FE_DIR% && %NPX% vite preview --host 0.0.0.0 > %LOG_DIR%\frontend.log 2>&1"

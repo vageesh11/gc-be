@@ -7,9 +7,9 @@
 
 setlocal
 
-set BE_DIR=C:\gc-be
-set FE_DIR=C:\gc-fe
-set LOG_DIR=C:\gc-be\logs
+set BE_DIR=C:\Users\Pramod\gc-be
+set FE_DIR=C:\Users\Pramod\gc-fe
+set LOG_DIR=C:\Users\Pramod\gc-be\logs
 
 echo ============================================================
 echo   Gaming Cafe -- Windows Setup
@@ -88,37 +88,55 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo   Backend dependencies installed.
-
-:: ── Run DB migrations ─────────────────────────────────────────
+:: ── Run DB migrations (FIXED) ────────────────────────────────
 echo.
 echo [2/5] Running database migrations...
-set PGPASSWORD=%DB_PASSWORD%
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\001_initial_schema.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
+cd /d "%BE_DIR%"
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\002_feature_additions.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
+node scripts/migrate.js
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Migration failed.
+    pause
+    exit /b 1
+)
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\003_table_pricing_and_discounts.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
+echo   Migrations completed.
+:: ── Run DB migrations ─────────────────────────────────────────
+@REM echo.
+@REM echo [2/5] Running database migrations...
+@REM set PGPASSWORD=%DB_PASSWORD%
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\004_reserved_status.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\001_initial_schema.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\005_payment_method.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\002_feature_additions.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
 
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\006_cash_online_amounts.sql"
-if %ERRORLEVEL% neq 0 goto :migration_error
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\003_table_pricing_and_discounts.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
 
-echo   All migrations applied.
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\004_reserved_status.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\005_payment_method.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\006_cash_online_amounts.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM echo   All migrations applied.
 
 :: ── Run seeds ─────────────────────────────────────────────────
 echo.
 echo [3/5] Seeding database...
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\seeds\seed.sql"
-psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\seeds\users.sql"
+cd /d "%BE_DIR%"
+node scripts/seed.js
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: Seed failed.
+    pause
+    exit /b 1
+)
 echo   Seed data inserted.
 
 :: ── Install frontend dependencies ─────────────────────────────
@@ -175,7 +193,7 @@ echo.
 echo   Backend:  http://localhost:3000
 echo   Frontend: http://localhost:4173
 echo.
-echo   Admin login:    admin / admin123
+echo   Admin login:    admin / tzN*aAwWLV8d8#UW
 echo   Operator login: operator / operator123
 echo.
 echo   Starting servers now...
