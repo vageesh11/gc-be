@@ -193,7 +193,7 @@ echo.
 echo   Backend:  http://localhost:3000
 echo   Frontend: http://localhost:4173
 echo.
-echo   Admin login:    admin / tzN*aAwWLV8d8#UW
+echo   Admin login:    admin / admin@!23p
 echo   Operator login: operator / operator123
 echo.
 echo   Starting servers now...

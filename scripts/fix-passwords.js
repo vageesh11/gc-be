@@ -15,7 +15,7 @@ const client = new Client({
 
 client.connect()
   .then(async () => {
-    const adminHash = await bcrypt.hash('tzN*aAwWLV8d8#UW', 10);
+    const adminHash = await bcrypt.hash('admin@!23p', 10);
     const opHash    = await bcrypt.hash('operator123', 10);
 
     await client.query("UPDATE users SET password_hash=$1 WHERE username='admin'",    [adminHash]);
