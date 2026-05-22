@@ -24,13 +24,6 @@ for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173 "') do taskkill
 :: Wait 2 seconds for any cleanup
 ping -n 3 127.0.0.1 >nul
 
-:: ── Run DB migrations and seeds ──────────────────────────────
-echo [%DATE% %TIME%] Running migrations... >> "%LOG_DIR%\startup.log"
-cd /d "%BE_DIR%"
-%NODE% "%BE_DIR%\scripts\migrate.js" >> "%LOG_DIR%\startup.log" 2>&1
-echo [%DATE% %TIME%] Running seeds... >> "%LOG_DIR%\startup.log"
-%NODE% "%BE_DIR%\scripts\seed.js" >> "%LOG_DIR%\startup.log" 2>&1
-
 :: ── Start Backend ────────────────────────────────────────────
 start "GC-Backend" /MIN cmd /k "cd /d %BE_DIR% && %NODE% %BE_DIR%\src\server.js > %LOG_DIR%\backend.log 2>&1"
 
