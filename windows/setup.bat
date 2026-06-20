@@ -88,18 +88,44 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo   Backend dependencies installed.
-
-:: ── Run DB migrations ────────────────────────────────────────
+:: ── Run DB migrations (FIXED) ────────────────────────────────
 echo.
 echo [2/5] Running database migrations...
+
 cd /d "%BE_DIR%"
+
 node scripts/migrate.js
 if %ERRORLEVEL% neq 0 (
     echo ERROR: Migration failed.
     pause
     exit /b 1
 )
+
 echo   Migrations completed.
+:: ── Run DB migrations ─────────────────────────────────────────
+@REM echo.
+@REM echo [2/5] Running database migrations...
+@REM set PGPASSWORD=%DB_PASSWORD%
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\001_initial_schema.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\002_feature_additions.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\003_table_pricing_and_discounts.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\004_reserved_status.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\005_payment_method.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\006_cash_online_amounts.sql"
+@REM if %ERRORLEVEL% neq 0 goto :migration_error
+
+@REM echo   All migrations applied.
 
 :: ── Run seeds ────────────────────────────────────────────────
 echo.
@@ -167,7 +193,7 @@ echo.
 echo   Backend:  http://localhost:3000
 echo   Frontend: http://localhost:4173
 echo.
-echo   Admin login:    admin / admin123
+echo   Admin login:    admin / admin@!23p
 echo   Operator login: operator / operator123
 echo.
 echo   Starting servers now...

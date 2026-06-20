@@ -21,13 +21,13 @@ echo [%DATE% %TIME%] Gaming Cafe starting... >> "%LOG_DIR%\startup.log"
 for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":3000 "') do taskkill /PID %%A /F >nul 2>&1
 for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173 "') do taskkill /PID %%A /F >nul 2>&1
 
-:: ── Wait 2 seconds (ping trick works everywhere on Windows) ──
+:: Wait 2 seconds for any cleanup
 ping -n 3 127.0.0.1 >nul
 
 :: ── Start Backend ────────────────────────────────────────────
-start "GC-Backend" /MIN cmd /k ""%NODE%" "%BE_DIR%\src\server.js" > "%LOG_DIR%\backend.log" 2>&1"
+start "GC-Backend" /MIN cmd /k "cd /d %BE_DIR% && %NODE% %BE_DIR%\src\server.js > %LOG_DIR%\backend.log 2>&1"
 
-:: ── Wait 5 seconds for backend to be ready ───────────────────
+:: Wait 5 seconds for backend to be ready
 ping -n 6 127.0.0.1 >nul
 
 :: ── Start Frontend ───────────────────────────────────────────
