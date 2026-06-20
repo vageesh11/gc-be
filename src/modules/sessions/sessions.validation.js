@@ -35,6 +35,7 @@ const startSession = Joi.object({
 
   // Discount
   discount_type:     Joi.string().valid(...DISCOUNT_TYPES).default('none'),
+  discount_scope:    Joi.string().valid('session', 'order', 'all').default('all'),
   discount_value:    Joi.when('discount_type', {
     is:        Joi.valid('percentage', 'flat'),
     then:      Joi.number().min(0).required(),

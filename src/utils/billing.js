@@ -50,25 +50,37 @@ function calcSessionCost(durationMinutes, pricePerMinute) {
 }
 
 /**
- * Apply a discount to a gross amount.
- * Returns { discount_amount, net_amount } both as ₹ decimal strings.
+ * Apply a discount strictly based on its scope.
  *
- * @param {string} grossAmount      - e.g. "120.00"
- * @param {string} discountType     - 'none' | 'percentage' | 'flat' | 'pass'
+ * @param {string} sessionAmount  - table time cost e.g. "120.00"
+ * @param {string} ordersTotal    - snacks/orders total e.g. "50.00"
+ * @param {string} discountType   - 'none' | 'percentage' | 'flat' | 'pass'
  * @param {string|number} discountValue  - percentage (0-100) or flat ₹ amount
+ * @param {string} scope          - 'session' | 'order' | 'all'
+ *                                  'session' → apply only to table time
+ *                                  'order'   → apply only to snacks/orders
+ *                                  'all'     → apply to entire gross total
  * @returns {{ discount_amount: string, net_amount: string }}
  */
-function applyDiscount(grossAmount, discountType, discountValue) {
-  const grossPaise = Math.round(parseFloat(grossAmount) * 100);
-  let discountPaise = 0;
+function applyDiscount(sessionAmount, ordersTotal, discountType, discountValue, scope = 'all') {
+  const sessionPaise = Math.round(parseFloat(sessionAmount) * 100);
+  const ordersPaise  = Math.round(parseFloat(ordersTotal)   * 100);
+  const grossPaise   = sessionPaise + ordersPaise;
 
+  // Determine the base to which the discount applies
+  let basePaise;
+  if (scope === 'session') basePaise = sessionPaise;
+  else if (scope === 'order') basePaise = ordersPaise;
+  else basePaise = grossPaise; // 'all'
+
+  let discountPaise = 0;
   if (discountType === 'percentage') {
     const pct = Math.min(parseFloat(discountValue), 100);
-    discountPaise = Math.round(grossPaise * pct / 100);
+    discountPaise = Math.round(basePaise * pct / 100);
   } else if (discountType === 'flat' || discountType === 'pass') {
     discountPaise = Math.min(
       Math.round(parseFloat(discountValue) * 100),
-      grossPaise
+      basePaise
     );
   }
 

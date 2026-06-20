@@ -12,7 +12,7 @@ const PAYMENT_METHOD_EXPR =
 
 async function create(
   { table_id, customer_id, booking_id, customer_pass_id,
-    booking_type, booked_duration, discount_type, discount_value,
+    booking_type, booked_duration, discount_type, discount_value, discount_scope,
     status, scheduled_start },
   client
 ) {
@@ -20,14 +20,14 @@ async function create(
   const { rows } = await runner.query(
     `INSERT INTO sessions
        (table_id, customer_id, booking_id, customer_pass_id,
-        booking_type, booked_duration, discount_type, discount_value,
+        booking_type, booked_duration, discount_type, discount_value, discount_scope,
         status, scheduled_start)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
      RETURNING id, table_id, customer_id, booking_type, booked_duration,
-               discount_type, discount_value, status, scheduled_start,
+               discount_type, discount_value, discount_scope, status, scheduled_start,
                start_time, created_at`,
     [table_id, customer_id || null, booking_id || null, customer_pass_id || null,
-     booking_type, booked_duration || null, discount_type, discount_value,
+     booking_type, booked_duration || null, discount_type, discount_value, discount_scope || 'all',
      status, scheduled_start || null]
   );
   return rows[0];
@@ -38,7 +38,7 @@ async function findById(id) {
     `SELECT s.id, s.table_id, s.customer_id, s.booking_id, s.customer_pass_id,
             s.start_time, s.end_time, s.duration, s.status,
             s.booking_type, s.booked_duration, s.scheduled_start,
-            s.discount_type, s.discount_value, s.discount_amount,
+            s.discount_type, s.discount_value, s.discount_scope, s.discount_amount,
             s.session_amount, s.total_amount, s.net_amount,
             s.cash_amount, s.online_amount,
             ${PAYMENT_METHOD_EXPR},

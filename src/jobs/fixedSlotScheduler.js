@@ -25,7 +25,7 @@ async function runFixedSlotCheck(io) {
     // Find active fixed_slot sessions where start_time + booked_duration has passed
     const { rows } = await db.query(`
       SELECT s.id, s.table_id, s.start_time, s.booked_duration,
-             s.discount_type, s.discount_value, s.customer_pass_id,
+             s.discount_type, s.discount_value, s.discount_scope, s.customer_pass_id,
              t.price_per_minute, t.wiz_ip,
              t.name AS table_name, t.type AS table_type,
              c.name AS customer_name, c.phone AS customer_phone
@@ -56,7 +56,8 @@ async function runFixedSlotCheck(io) {
       const totalAmount = addAmounts(sessionAmount, ordersTotal);
 
       const { discount_amount, net_amount: rawNet } = applyDiscount(
-        totalAmount, session.discount_type, session.discount_value
+        sessionAmount, ordersTotal,
+        session.discount_type, session.discount_value, session.discount_scope || 'all'
       );
       const net_amount = roundToNearest5(rawNet);
 

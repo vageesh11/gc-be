@@ -35,6 +35,7 @@ async function startSession(data, io) {
     scheduled_start  = null,
     discount_type    = 'none',
     discount_value   = 0,
+    discount_scope   = 'all',
     customer_pass_id = null,
     booking_id       = null,
   } = data;
@@ -102,6 +103,7 @@ async function startSession(data, io) {
       booked_duration,
       discount_type,
       discount_value,
+      discount_scope,
       status:           sessionStatus,
       scheduled_start:  booking_type === 'pre_booking' ? scheduled_start : null,
     }, client);
@@ -253,7 +255,8 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
   const totalAmount = addAmounts(sessionAmount, ordersTotal);
 
   const { discount_amount, net_amount: rawNetAmount } = applyDiscount(
-    totalAmount, session.discount_type, session.discount_value
+    sessionAmount, ordersTotal,
+    session.discount_type, session.discount_value, session.discount_scope || 'all'
   );
 
   // Round net_amount to the nearest ₹5 — stored in DB as the final billed amount.
