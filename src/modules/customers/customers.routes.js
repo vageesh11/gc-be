@@ -14,6 +14,7 @@ router.use(authenticate);
 router.get('/',              authorize('admin', 'operator'), controller.getCustomers);
 router.post('/',             authorize('admin', 'operator'), validate(schema.createCustomer), controller.createCustomer);
 router.get('/:id',           authorize('admin', 'operator'), controller.getCustomerById);
+router.put('/:id',           authorize('admin'),             validate(schema.updateCustomer), controller.updateCustomer);
 router.get('/:id/sessions',  authorize('admin', 'operator'), controller.getCustomerSessions);
 
 module.exports = router;

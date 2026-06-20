@@ -17,10 +17,17 @@ async function createCustomer(data) {
   return customersRepo.create(data);
 }
 
+async function updateCustomer(id, data) {
+  const customer = await customersRepo.findById(id);
+  if (!customer) throw new AppError(`Customer with id ${id} not found.`, 404);
+  const updated = await customersRepo.update(id, data);
+  return updated;
+}
+
 async function getCustomerSessions(customerId, filters) {
   const customer = await customersRepo.findById(customerId);
   if (!customer) throw new AppError(`Customer with id ${customerId} not found.`, 404);
   return customersRepo.findSessionHistory(customerId, filters);
 }
 
-module.exports = { getAllCustomers, getCustomerById, createCustomer, getCustomerSessions };
+module.exports = { getAllCustomers, getCustomerById, createCustomer, updateCustomer, getCustomerSessions };

@@ -7,6 +7,7 @@ const ordersRepo     = require('../orders/orders.repository');
 const customersRepo  = require('../customers/customers.repository');
 const passesRepo     = require('../passes/passes.repository');
 const AppError       = require('../../utils/AppError');
+const wiz            = require('../../utils/wiz');
 const {
   calcBillableMinutes,
   calcSessionCost,
@@ -54,7 +55,16 @@ async function startSession(data, io) {
       throw new AppError('Table is already occupied. End the current session first.', 409);
     }
     if (table.status === 'RESERVED') {
-      throw new AppError('Table has a pre-booking. Confirm or cancel it first.', 409);
+      const existing = await sessionsRepo.findActiveByTableId(table_id);
+      if (existing && existing.scheduled_start) {
+        const dt = new Date(existing.scheduled_start);
+        const formatted = dt.toLocaleString('en-IN', {
+          weekday: 'short', day: 'numeric', month: 'short',
+          year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
+        });
+        throw new AppError(`This table already has a booking on ${formatted}.`, 409);
+      }
+      throw new AppError('This table already has a pre-booking. Confirm or cancel it first.', 409);
     }
   }
 
@@ -79,11 +89,13 @@ async function startSession(data, io) {
   try {
     await client.query('BEGIN');
 
-    const customer = await resolveCustomer(customer_name, customer_phone, client);
+    const customer = (customer_name && customer_phone)
+      ? await resolveCustomer(customer_name, customer_phone, client)
+      : null;
 
     const session = await sessionsRepo.create({
       table_id,
-      customer_id:      customer.id,
+      customer_id:      customer ? customer.id : null,
       booking_id,
       customer_pass_id,
       booking_type,
@@ -102,11 +114,15 @@ async function startSession(data, io) {
     await client.query('COMMIT');
 
     if (io) {
+      // WiZ: turn ON for active sessions (not pre_booking — light on only on confirm)
+      if (booking_type !== 'pre_booking') wiz.turnOn(table.wiz_ip).catch(() => {});
+
       if (booking_type === 'pre_booking') {
         io.emit('table_pre_booked', {
           tableId: table_id, tableName: table.name,
           sessionId: session.id, scheduledStart: scheduled_start,
-          customerName: customer.name, customerPhone: customer.phone,
+          customerName: customer ? customer.name : null,
+          customerPhone: customer ? customer.phone : null,
         });
       } else {
         io.emit('session_started', { sessionId: session.id, tableId: table_id, tableName: table.name });
@@ -114,7 +130,7 @@ async function startSession(data, io) {
       io.emit('table_status_changed', { tableId: table_id, status: tableStatus });
     }
 
-    return { ...session, customer_name: customer.name, customer_phone: customer.phone };
+    return { ...session, customer_name: customer ? customer.name : null, customer_phone: customer ? customer.phone : null };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -159,6 +175,10 @@ async function confirmPreBooking(sessionId, io) {
       });
       io.emit('table_status_changed', { tableId: session.table_id, status: 'OCCUPIED' });
     }
+
+    // WiZ: customer arrived and confirmed — turn ON
+    const tableRow = await tablesRepo.findById(session.table_id);
+    wiz.turnOn(tableRow?.wiz_ip).catch(() => {});
 
     return { ...activated, customer_name: session.customer_name, customer_phone: session.customer_phone };
   } catch (err) {
@@ -266,6 +286,9 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
 
     await client.query('COMMIT');
 
+    // WiZ: session ended — turn OFF the table light
+    wiz.turnOff(session.wiz_ip).catch(() => {});
+
     if (io) {
       io.emit('session_ended', { sessionId, tableId: session.table_id, duration: billable, netAmount: net_amount });
       io.emit('table_status_changed', { tableId: session.table_id, status: 'AVAILABLE' });
@@ -341,6 +364,14 @@ async function getSessionById(sessionId)  {
 }
 async function getAllSessions(filters)    { return sessionsRepo.findAll(filters); }
 
+async function updatePayment(sessionId, { cashAmount, onlineAmount }) {
+  const session = await sessionsRepo.findById(sessionId);
+  if (!session) throw new AppError(`Session with id ${sessionId} not found.`, 404);
+  if (session.status !== 'ended') throw new AppError('Payment can only be edited on closed sessions.', 400);
+  const updated = await sessionsRepo.updatePayment(sessionId, { cashAmount, onlineAmount });
+  return updated;
+}
+
 module.exports = {
   startSession,
   confirmPreBooking,
@@ -351,4 +382,5 @@ module.exports = {
   getActiveSessions,
   getSessionById,
   getAllSessions,
+  updatePayment,
 };

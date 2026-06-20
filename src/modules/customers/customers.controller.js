@@ -30,6 +30,13 @@ async function createCustomer(req, res, next) {
   } catch (err) { return next(err); }
 }
 
+async function updateCustomer(req, res, next) {
+  try {
+    const customer = await customersService.updateCustomer(Number(req.params.id), req.body);
+    return res.status(200).json({ status: 'success', data: customer });
+  } catch (err) { return next(err); }
+}
+
 async function getCustomerSessions(req, res, next) {
   try {
     const { page, limit, offset } = parsePagination(req.query);
@@ -44,4 +51,4 @@ async function getCustomerSessions(req, res, next) {
   } catch (err) { return next(err); }
 }
 
-module.exports = { getCustomers, getCustomerById, createCustomer, getCustomerSessions };
+module.exports = { getCustomers, getCustomerById, createCustomer, updateCustomer, getCustomerSessions };

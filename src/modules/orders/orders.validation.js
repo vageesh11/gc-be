@@ -8,4 +8,9 @@ const createOrder = Joi.object({
   quantity:   Joi.number().integer().min(1).required(),
 });
 
-module.exports = { createOrder };
+const createSnackOrder = Joi.object({
+  item_id:  Joi.number().integer().positive().required(),
+  quantity: Joi.number().integer().min(1).required(),
+});
+
+module.exports = { createOrder, createSnackOrder };

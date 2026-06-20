@@ -10,6 +10,7 @@ const routes       = require('./routes/index');
 const notFound     = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
 const env          = require('./config/env');
+const { startFixedSlotScheduler } = require('./jobs/fixedSlotScheduler');
 
 function createApp(httpServer) {
   const app = express();
@@ -34,6 +35,9 @@ function createApp(httpServer) {
       console.log(`[WS] Client disconnected: ${socket.id}`);
     });
   });
+
+  // ── Fixed-slot auto-end scheduler ────────────────────────────────
+  startFixedSlotScheduler(io);
 
   // Attach io to every request so controllers can emit events
   app.use((req, res, next) => {

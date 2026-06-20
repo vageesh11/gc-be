@@ -85,6 +85,17 @@ async function getAllSessions(req, res, next) {
   } catch (err) { return next(err); }
 }
 
+async function updatePayment(req, res, next) {
+  try {
+    const { cash_amount, online_amount } = req.body;
+    const result = await sessionsService.updatePayment(
+      Number(req.params.id),
+      { cashAmount: cash_amount, onlineAmount: online_amount }
+    );
+    return res.status(200).json({ status: 'success', data: result });
+  } catch (err) { return next(err); }
+}
+
 module.exports = {
   startSession,
   confirmPreBooking,
@@ -95,4 +106,5 @@ module.exports = {
   getActiveSessions,
   getSessionById,
   getAllSessions,
+  updatePayment,
 };

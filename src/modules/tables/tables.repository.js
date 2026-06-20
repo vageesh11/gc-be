@@ -6,6 +6,7 @@ const TABLE_COLS =
   'id, name, type, status,' +
   ' price_per_minute,' +
   ' ROUND(price_per_minute * 60, 2) AS price_per_hour,' +
+  ' wiz_ip, wiz_mac,' +
   ' created_at, updated_at';
 
 async function findAll({ type, status, limit, offset } = {}) {
@@ -40,15 +41,16 @@ async function findById(id) {
   return rows[0] || null;
 }
 
-async function create({ name, type, price_per_minute }) {
+async function create({ name, type, price_per_minute, wiz_ip = null, wiz_mac = null }) {
   const { rows } = await db.query(
-    `INSERT INTO gaming_tables (name, type, price_per_minute)
-     VALUES ($1, $2, $3)
+    `INSERT INTO gaming_tables (name, type, price_per_minute, wiz_ip, wiz_mac)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING id, name, type, status,
                price_per_minute,
                ROUND(price_per_minute * 60, 2) AS price_per_hour,
+               wiz_ip, wiz_mac,
                created_at, updated_at`,
-    [name, type, price_per_minute]
+    [name, type, price_per_minute, wiz_ip, wiz_mac]
   );
   return rows[0];
 }

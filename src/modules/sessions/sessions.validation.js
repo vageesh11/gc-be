@@ -8,9 +8,9 @@ const DISCOUNT_TYPES = ['none', 'percentage', 'flat', 'pass'];
 const startSession = Joi.object({
   table_id:          Joi.number().integer().positive().required(),
 
-  // Customer info — auto-creates or matches by phone
-  customer_name:     Joi.string().trim().min(1).max(150).required(),
-  customer_phone:    Joi.string().trim().pattern(/^[6-9]\d{9}$/).required()
+  // Customer info — optional; if provided, auto-creates or matches by phone
+  customer_name:     Joi.string().trim().min(1).max(150).optional().allow('', null),
+  customer_phone:    Joi.string().trim().pattern(/^[6-9]\d{9}$/).optional().allow('', null)
                        .messages({ 'string.pattern.base': 'Phone must be a valid 10-digit Indian mobile number.' }),
 
   // Booking type
@@ -27,8 +27,10 @@ const startSession = Joi.object({
   // booked_duration: required for fixed_slot and pre_booking
   booked_duration:   Joi.when('booking_type', {
     is:        Joi.valid('fixed_slot', 'pre_booking'),
-    then:      Joi.number().integer().min(1).required(),
-    otherwise: Joi.number().integer().min(1).optional(),
+    then:      Joi.number().integer().min(5).multiple(5).required()
+                 .messages({ 'number.multiple': 'booked_duration must be a multiple of 5 minutes.' }),
+    otherwise: Joi.number().integer().min(5).multiple(5).optional()
+                 .messages({ 'number.multiple': 'booked_duration must be a multiple of 5 minutes.' }),
   }),
 
   // Discount
@@ -72,4 +74,14 @@ const resumeSession = Joi.object({
   session_id: Joi.number().integer().positive().required(),
 });
 
-module.exports = { startSession, endSession, pauseSession, resumeSession };
+const updatePayment = Joi.object({
+  cash_amount:   Joi.number().min(0).precision(2).required(),
+  online_amount: Joi.number().min(0).precision(2).required(),
+}).custom((val, helpers) => {
+  if (val.cash_amount === 0 && val.online_amount === 0) {
+    return helpers.error('any.invalid');
+  }
+  return val;
+}).messages({ 'any.invalid': 'cash_amount and online_amount cannot both be zero.' });
+
+module.exports = { startSession, endSession, pauseSession, resumeSession, updatePayment };

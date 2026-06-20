@@ -72,4 +72,30 @@ async function getOrdersBySession(sessionId, filters) {
   return ordersRepo.findBySessionId(sessionId, filters);
 }
 
-module.exports = { createOrder, getOrdersBySession };
+async function createSnackOrder({ item_id, quantity }) {
+  const item = await inventoryRepo.findById(item_id);
+  if (!item) throw new AppError(`Inventory item with id ${item_id} not found.`, 404);
+  if (item.stock_quantity < quantity) {
+    throw new AppError(`Insufficient stock for "${item.name}". Available: ${item.stock_quantity}.`, 400);
+  }
+
+  const unit_price = item.price;
+  const subtotal = ((Math.round(parseFloat(unit_price) * 100) * quantity) / 100).toFixed(2);
+
+  const dbClient = await db.getClient();
+  try {
+    await dbClient.query('BEGIN');
+    const decremented = await inventoryRepo.decrementStock(item_id, quantity, dbClient);
+    if (!decremented) throw new AppError(`Stock for "${item.name}" is no longer sufficient.`, 409);
+    const order = await ordersRepo.create({ session_id: null, item_id, quantity, unit_price, subtotal }, dbClient);
+    await dbClient.query('COMMIT');
+    return { ...order, item_name: item.name };
+  } catch (err) {
+    await dbClient.query('ROLLBACK');
+    throw err;
+  } finally {
+    dbClient.release();
+  }
+}
+
+module.exports = { createOrder, createSnackOrder, getOrdersBySession };

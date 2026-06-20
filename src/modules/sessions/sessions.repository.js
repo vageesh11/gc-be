@@ -240,6 +240,24 @@ async function findPausesBySessionId(sessionId) {
   return rows;
 }
 
+async function updatePayment(id, { cashAmount, onlineAmount }) {
+  const { rows } = await db.query(
+    `UPDATE sessions
+     SET cash_amount   = $1,
+         online_amount = $2
+     WHERE id = $3
+     RETURNING id, cash_amount, online_amount,
+       CASE
+         WHEN cash_amount > 0 AND online_amount = 0 THEN 'cash'
+         WHEN cash_amount = 0 AND online_amount > 0 THEN 'online'
+         WHEN cash_amount > 0 AND online_amount > 0 THEN 'split'
+         ELSE NULL
+       END AS payment_method`,
+    [cashAmount, onlineAmount, id]
+  );
+  return rows[0] || null;
+}
+
 module.exports = {
   create,
   findById,
@@ -249,6 +267,7 @@ module.exports = {
   activateReservedSession,
   cancelReservedSession,
   endSession,
+  updatePayment,
   pauseSession,
   resumeSession,
   findPausesBySessionId,

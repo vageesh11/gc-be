@@ -15,7 +15,13 @@ async function createTable(data) {
     // Round to 4 decimal places for accuracy, stored as NUMERIC(10,4) in DB
     price_per_minute = parseFloat((data.price_per_hour / 60).toFixed(4));
   }
-  return tablesRepo.create({ name: data.name, type: data.type, price_per_minute });
+  return tablesRepo.create({
+    name: data.name,
+    type: data.type,
+    price_per_minute,
+    wiz_ip:  data.wiz_ip  || null,
+    wiz_mac: data.wiz_mac || null,
+  });
 }
 
 async function updateTableStatus(id, status, io) {

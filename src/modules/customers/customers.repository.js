@@ -85,4 +85,13 @@ async function findSessionHistory(customerId, { limit, offset } = {}) {
   return { rows, total: countRes.rows[0].count };
 }
 
-module.exports = { findAll, findById, findByPhone, create, findSessionHistory };
+async function update(id, { name, phone }) {
+  const { rows } = await db.query(
+    `UPDATE customers SET name = $1, phone = $2 WHERE id = $3
+     RETURNING id, name, phone, created_at`,
+    [name, phone, id]
+  );
+  return rows[0] || null;
+}
+
+module.exports = { findAll, findById, findByPhone, create, update, findSessionHistory };

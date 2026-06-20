@@ -28,4 +28,13 @@ async function getOrdersBySession(req, res, next) {
   }
 }
 
-module.exports = { createOrder, getOrdersBySession };
+async function createSnackOrder(req, res, next) {
+  try {
+    const order = await ordersService.createSnackOrder(req.body);
+    return res.status(201).json({ status: 'success', data: order });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = { createOrder, createSnackOrder, getOrdersBySession };

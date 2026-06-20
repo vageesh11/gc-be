@@ -14,6 +14,7 @@ router.post('/start',           authorize('admin', 'operator'), validate(schema.
 router.post('/end',             authorize('admin', 'operator'), validate(schema.endSession),    controller.endSession);
 router.post('/pause',           authorize('admin', 'operator'), validate(schema.pauseSession),  controller.pauseSession);
 router.post('/resume',          authorize('admin', 'operator'), validate(schema.resumeSession), controller.resumeSession);
+router.patch('/:id/payment',    authorize('admin'),             validate(schema.updatePayment), controller.updatePayment);
 router.patch('/:id/confirm',    authorize('admin', 'operator'), controller.confirmPreBooking);
 router.patch('/:id/cancel',     authorize('admin', 'operator'), controller.cancelPreBooking);
 router.get('/active',           authorize('admin', 'operator'), controller.getActiveSessions);
