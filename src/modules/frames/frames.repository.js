@@ -2,27 +2,28 @@
 
 const db = require('../../config/db');
 
-async function startFrame(sessionId, playerName, client) {
+async function startFrame(sessionId, client) {
   const runner = client || db;
   const { rows } = await runner.query(
-    `INSERT INTO session_frames (session_id, player_name)
-     VALUES ($1, $2)
+    `INSERT INTO session_frames (session_id)
+     VALUES ($1)
      RETURNING id, session_id, player_name, started_at, ended_at, duration_min, amount`,
-    [sessionId, playerName]
+    [sessionId]
   );
   return rows[0];
 }
 
-async function endFrame(frameId, { endedAt, durationMin, amount }, client) {
+async function endFrame(frameId, { endedAt, durationMin, amount, playerName }, client) {
   const runner = client || db;
   const { rows } = await runner.query(
     `UPDATE session_frames
      SET ended_at     = $1,
          duration_min = $2,
-         amount       = $3
-     WHERE id = $4
+         amount       = $3,
+         player_name  = $4
+     WHERE id = $5
      RETURNING id, session_id, player_name, started_at, ended_at, duration_min, amount`,
-    [endedAt, durationMin, amount, frameId]
+    [endedAt, durationMin, amount, playerName, frameId]
   );
   return rows[0] || null;
 }

@@ -259,7 +259,7 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
   } else {
     const pauses = await sessionsRepo.findPausesBySessionId(sessionId);
     billable      = calcBillableMinutes(session.start_time, endTime, pauses);
-    sessionAmount = calcSessionCost(billable, session.price_per_minute);
+    sessionAmount = roundToNearest5(calcSessionCost(billable, session.price_per_minute));
   }
 
   const orders      = await ordersRepo.findBySessionId(sessionId);

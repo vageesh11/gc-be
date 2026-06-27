@@ -43,6 +43,7 @@ async function getBill(sessionId) {
       total_amount:     session.total_amount,
       discount_type:    session.discount_type,
       discount_value:   session.discount_value,
+      discount_scope:   session.discount_scope || null,
       discount_amount:  session.discount_amount,
       net_amount:       session.net_amount,
       cash_amount:      session.cash_amount,
@@ -66,7 +67,7 @@ async function getBill(sessionId) {
     sessionAmt = parseFloat(summary.total_amount || '0').toFixed(2);
   } else {
     billable   = calcBillableMinutes(session.start_time, new Date(), pauses);
-    sessionAmt = calcSessionCost(billable, session.price_per_minute);
+    sessionAmt = roundToNearest5(calcSessionCost(billable, session.price_per_minute));
   }
 
   const totalAmt = addAmounts(sessionAmt, ordersTotal);
@@ -94,6 +95,7 @@ async function getBill(sessionId) {
     total_amount:     totalAmt,
     discount_type:    session.discount_type,
     discount_value:   session.discount_value,
+    discount_scope:   session.discount_scope || null,
     discount_amount,
     net_amount,
     cash_amount:      null,
