@@ -60,6 +60,13 @@ async function deleteTable(id) {
   if (table.status === 'OCCUPIED') {
     throw new AppError('Cannot delete a table with an active session. End the session first.', 409);
   }
+  const hasSessions = await tablesRepo.hasAnySessions(id);
+  if (hasSessions) {
+    throw new AppError(
+      'Cannot delete this table because it has session history. You can mark it inactive instead.',
+      409
+    );
+  }
   return tablesRepo.remove(id);
 }
 

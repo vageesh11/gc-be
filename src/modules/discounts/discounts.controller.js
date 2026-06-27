@@ -7,7 +7,8 @@ async function getDiscounts(req, res, next) {
   try {
     const { page, limit, offset } = parsePagination(req.query);
     const include_inactive = req.query.include_inactive === 'true';
-    const { rows, total } = await discountsService.getAllDiscounts({ include_inactive, limit, offset });
+    const table_type = req.query.table_type || undefined;
+    const { rows, total } = await discountsService.getAllDiscounts({ include_inactive, table_type, limit, offset });
     return res.status(200).json({
       status: 'success',
       data: rows,

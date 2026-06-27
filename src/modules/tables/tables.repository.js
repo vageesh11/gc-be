@@ -55,6 +55,14 @@ async function create({ name, type, price_per_minute, wiz_ip = null, wiz_mac = n
   return rows[0];
 }
 
+async function hasAnySessions(id) {
+  const { rows } = await db.query(
+    `SELECT 1 FROM sessions WHERE table_id = $1 LIMIT 1`,
+    [id]
+  );
+  return rows.length > 0;
+}
+
 async function remove(id) {
   const { rows } = await db.query(
     `DELETE FROM gaming_tables WHERE id = $1 RETURNING id, name, type`,
@@ -94,4 +102,4 @@ async function updateStatus(id, status) {
   return rows[0] || null;
 }
 
-module.exports = { findAll, findById, create, updateStatus, remove, findActiveSessionByTableId };
+module.exports = { findAll, findById, create, updateStatus, remove, hasAnySessions, findActiveSessionByTableId };

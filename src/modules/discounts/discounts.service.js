@@ -3,8 +3,8 @@
 const discountsRepo = require('./discounts.repository');
 const AppError      = require('../../utils/AppError');
 
-async function getAllDiscounts({ include_inactive, limit, offset }) {
-  return discountsRepo.findAll({ include_inactive, limit, offset });
+async function getAllDiscounts({ include_inactive, table_type, limit, offset }) {
+  return discountsRepo.findAll({ include_inactive, table_type, limit, offset });
 }
 
 async function getDiscountById(id) {

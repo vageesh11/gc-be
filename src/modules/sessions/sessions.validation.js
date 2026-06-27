@@ -2,7 +2,7 @@
 
 const Joi = require('joi');
 
-const BOOKING_TYPES  = ['pay_as_you_go', 'fixed_slot', 'pre_booking'];
+const BOOKING_TYPES  = ['pay_as_you_go', 'fixed_slot', 'pre_booking', 'frame_wise'];
 const DISCOUNT_TYPES = ['none', 'percentage', 'flat', 'pass'];
 
 const startSession = Joi.object({
@@ -54,18 +54,11 @@ const startSession = Joi.object({
 
 const endSession = Joi.object({
   session_id:    Joi.number().integer().positive().required(),
-  cash_amount:   Joi.number().min(0).precision(2).required()
-                   .messages({ 'any.required': 'cash_amount is required.' }),
-  online_amount: Joi.number().min(0).precision(2).required()
-                   .messages({ 'any.required': 'online_amount is required.' }),
-}).custom((val, helpers) => {
-  // cash_amount + online_amount must sum to approximately net_amount (validated in service)
-  // Here we just ensure at least one is > 0 (can't pay nothing)
-  if (val.cash_amount === 0 && val.online_amount === 0) {
-    return helpers.error('any.invalid');
-  }
-  return val;
-}).messages({ 'any.invalid': 'cash_amount and online_amount cannot both be zero.' });
+  cash_amount:   Joi.number().min(0).precision(2).default(0),
+  online_amount: Joi.number().min(0).precision(2).default(0),
+  discount_type:  Joi.string().valid(...DISCOUNT_TYPES).optional(),
+  discount_value: Joi.number().min(0).optional(),
+});
 
 const pauseSession = Joi.object({
   session_id: Joi.number().integer().positive().required(),

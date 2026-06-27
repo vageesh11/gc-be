@@ -2,6 +2,7 @@
 
 const db             = require('../../config/db');
 const sessionsRepo   = require('./sessions.repository');
+const framesRepo     = require('../frames/frames.repository');
 const tablesRepo     = require('../tables/tables.repository');
 const ordersRepo     = require('../orders/orders.repository');
 const customersRepo  = require('../customers/customers.repository');
@@ -246,9 +247,20 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
   }
 
   const endTime = new Date();
-  const pauses  = await sessionsRepo.findPausesBySessionId(sessionId);
-  const billable = calcBillableMinutes(session.start_time, endTime, pauses);
-  const sessionAmount = calcSessionCost(billable, session.price_per_minute);
+
+  let billable;
+  let sessionAmount;
+
+  if (session.booking_type === 'frame_wise') {
+    // For frame_wise, billing = sum of all completed frames
+    const summary = await framesRepo.sumBySessionId(sessionId);
+    billable      = Math.ceil(parseFloat(summary.total_duration_min));
+    sessionAmount = parseFloat(summary.total_amount).toFixed(2);
+  } else {
+    const pauses = await sessionsRepo.findPausesBySessionId(sessionId);
+    billable      = calcBillableMinutes(session.start_time, endTime, pauses);
+    sessionAmount = calcSessionCost(billable, session.price_per_minute);
+  }
 
   const orders      = await ordersRepo.findBySessionId(sessionId);
   const ordersTotal = calcOrdersTotal(orders);

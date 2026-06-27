@@ -13,6 +13,7 @@ const passesRouter    = require('../modules/passes/passes.routes');
 const bookingsRouter   = require('../modules/bookings/bookings.routes');
 const discountsRouter  = require('../modules/discounts/discounts.routes');
 const reportsRouter    = require('../modules/reports/reports.routes');
+const framesRouter     = require('../modules/frames/frames.routes');
 
 const authenticate = require('../middleware/authenticate');
 const authorize    = require('../middleware/authorize');
@@ -33,6 +34,7 @@ router.use('/passes',    passesRouter);     // auth handled inside module
 router.use('/bookings',   bookingsRouter);   // auth handled inside module
 router.use('/discounts',  discountsRouter);  // auth handled inside module
 router.use('/reports',    reportsRouter);    // auth handled inside module
+router.use('/frames',     framesRouter);      // auth handled inside module
 
 // Health check (public)
 router.get('/health', (req, res) => {

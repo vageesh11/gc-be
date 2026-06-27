@@ -2,6 +2,7 @@
 
 const sessionsRepo = require('../sessions/sessions.repository');
 const ordersRepo   = require('../orders/orders.repository');
+const framesRepo   = require('../frames/frames.repository');
 const AppError     = require('../../utils/AppError');
 const {
   calcBillableMinutes,
@@ -9,6 +10,7 @@ const {
   applyDiscount,
   calcOrdersTotal,
   addAmounts,
+  roundToNearest5,
 } = require('../../utils/billing');
 
 async function getBill(sessionId) {
@@ -18,6 +20,10 @@ async function getBill(sessionId) {
   const orders      = await ordersRepo.findBySessionId(sessionId);
   const ordersTotal = calcOrdersTotal(orders);
   const pauses      = await sessionsRepo.findPausesBySessionId(sessionId);
+  const isFrameWise = session.booking_type === 'frame_wise';
+
+  // Always fetch frames for frame_wise sessions
+  const frames = isFrameWise ? await framesRepo.findBySessionId(sessionId) : [];
 
   // Closed session — return stored final values
   if (session.end_time) {
@@ -45,17 +51,32 @@ async function getBill(sessionId) {
       status:           'CLOSED',
       pauses,
       orders,
+      frames,
     };
   }
 
-  // Active or paused session — live estimate
-  const now        = new Date();
-  const billable   = calcBillableMinutes(session.start_time, now, pauses);
-  const sessionAmt = calcSessionCost(billable, session.price_per_minute);
-  const totalAmt   = addAmounts(sessionAmt, ordersTotal);
-  const { discount_amount, net_amount } = applyDiscount(
-    totalAmt, session.discount_type, session.discount_value
+  // Active session — live estimate
+  let sessionAmt;
+  let billable;
+
+  if (isFrameWise) {
+    // For frame_wise: sum all completed frames
+    const summary = await framesRepo.sumBySessionId(sessionId);
+    billable   = Math.ceil(parseFloat(summary.total_duration_min) || 0);
+    sessionAmt = parseFloat(summary.total_amount || '0').toFixed(2);
+  } else {
+    billable   = calcBillableMinutes(session.start_time, new Date(), pauses);
+    sessionAmt = calcSessionCost(billable, session.price_per_minute);
+  }
+
+  const totalAmt = addAmounts(sessionAmt, ordersTotal);
+
+  // applyDiscount handles 'none' discount_type — returns full amount as net
+  const { discount_amount, net_amount: rawNet } = applyDiscount(
+    sessionAmt, ordersTotal,
+    session.discount_type || 'none', session.discount_value || 0, session.discount_scope || 'all'
   );
+  const net_amount = roundToNearest5(rawNet);
 
   return {
     session_id:       session.id,
@@ -81,6 +102,7 @@ async function getBill(sessionId) {
     status:           session.status === 'paused' ? 'PAUSED' : 'ACTIVE',
     pauses,
     orders,
+    frames,
   };
 }
 

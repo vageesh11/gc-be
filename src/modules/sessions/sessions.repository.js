@@ -46,6 +46,7 @@ async function findById(id) {
             t.name            AS table_name,
             t.type            AS table_type,
             t.price_per_minute,
+            t.wiz_ip,
             c.name            AS customer_name,
             c.phone           AS customer_phone
      FROM sessions s

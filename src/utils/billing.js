@@ -2,12 +2,13 @@
 
 /**
  * Calculate duration in minutes between two Date objects.
- * Rounds up to the nearest minute (minimum 1 minute).
+ * Rounds up to the nearest 5 minutes (minimum 5 minutes).
  */
 function calcDurationMinutes(startTime, endTime) {
   const diffMs = new Date(endTime) - new Date(startTime);
-  if (diffMs <= 0) return 1;
-  return Math.ceil(diffMs / 60000);
+  if (diffMs <= 0) return 5;
+  const rawMin = Math.ceil(diffMs / 60000);
+  return Math.ceil(rawMin / 5) * 5;
 }
 
 /**
@@ -17,7 +18,7 @@ function calcDurationMinutes(startTime, endTime) {
  * @param {Date}   endTime
  * @param {Array}  pauses  - array of { paused_at, resumed_at } from session_pauses table
  *                           resumed_at = null means currently paused
- * @returns {number} billable minutes (minimum 1)
+ * @returns {number} billable minutes rounded up to nearest 5 (minimum 5)
  */
 function calcBillableMinutes(startTime, endTime, pauses = []) {
   const start = new Date(startTime).getTime();
@@ -35,8 +36,9 @@ function calcBillableMinutes(startTime, endTime, pauses = []) {
   }
 
   const billableMs = Math.max(end - start - pausedMs, 0);
-  if (billableMs <= 0) return 1;
-  return Math.ceil(billableMs / 60000);
+  if (billableMs <= 0) return 5;
+  const rawMin = Math.ceil(billableMs / 60000);
+  return Math.ceil(rawMin / 5) * 5;
 }
 
 /**
