@@ -54,7 +54,7 @@ if not exist "%BE_DIR%\.env" (
     echo   NODE_ENV=production
     echo   PORT=3000
     echo   DB_HOST=localhost
-    echo   DB_PORT=5432
+    echo   DB_PORT=5434
     echo   DB_NAME=gaming_cafe
     echo   DB_USER=your_pg_username
     echo   DB_PASSWORD=your_pg_password
@@ -102,30 +102,6 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo   Migrations completed.
-:: ── Run DB migrations ─────────────────────────────────────────
-@REM echo.
-@REM echo [2/5] Running database migrations...
-@REM set PGPASSWORD=%DB_PASSWORD%
-
-@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\001_initial_schema.sql"
-@REM if %ERRORLEVEL% neq 0 goto :migration_error
-
-@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\002_feature_additions.sql"
-@REM if %ERRORLEVEL% neq 0 goto :migration_error
-
-@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\003_table_pricing_and_discounts.sql"
-@REM if %ERRORLEVEL% neq 0 goto :migration_error
-
-@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\004_reserved_status.sql"
-@REM if %ERRORLEVEL% neq 0 goto :migration_error
-
-@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\005_payment_method.sql"
-@REM if %ERRORLEVEL% neq 0 goto :migration_error
-
-@REM psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -f "%BE_DIR%\database\migrations\006_cash_online_amounts.sql"
-@REM if %ERRORLEVEL% neq 0 goto :migration_error
-
-@REM echo   All migrations applied.
 
 :: ── Run seeds ────────────────────────────────────────────────
 echo.
