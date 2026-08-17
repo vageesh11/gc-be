@@ -122,7 +122,7 @@ function styleDataRows(ws, startRow) {
  */
 async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topItems, orders) {
   const wb    = new ExcelJS.Workbook();
-  wb.creator  = 'Gaming Café System';
+  wb.creator  = 'Bengaluru Snooker Club';
   wb.created  = new Date();
 
   // ── Sheet 1: Summary ──────────────────────────────────────────

@@ -88,31 +88,36 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 echo   Backend dependencies installed.
-:: ── Run DB migrations (FIXED) ────────────────────────────────
+:: ── Run DB migrations via psql ───────────────────────────────
 echo.
 echo [2/5] Running database migrations...
-
-cd /d "%BE_DIR%"
-
-node scripts/migrate.js
-if %ERRORLEVEL% neq 0 (
-    echo ERROR: Migration failed.
-    pause
-    exit /b 1
+set PGPASSWORD=%DB_PASSWORD%
+for %%F in (%BE_DIR%\database\migrations\*.sql) do (
+    echo   Applying %%~nxF...
+    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -v ON_ERROR_STOP=1 -f "%%F" >nul
+    if errorlevel 1 (
+        echo ERROR: Migration %%~nxF failed.
+        set PGPASSWORD=
+        pause
+        exit /b 1
+    )
 )
-
 echo   Migrations completed.
 
-:: ── Run seeds ────────────────────────────────────────────────
+:: ── Run seeds via psql ───────────────────────────────────────
 echo.
 echo [3/5] Seeding database...
-cd /d "%BE_DIR%"
-node scripts/seed.js
-if %ERRORLEVEL% neq 0 (
-    echo ERROR: Seed failed.
-    pause
-    exit /b 1
+for %%F in (%BE_DIR%\database\seeds\*.sql) do (
+    echo   Applying %%~nxF...
+    psql -h %DB_HOST% -p %DB_PORT% -U %DB_USER% -d %DB_NAME% -v ON_ERROR_STOP=1 -f "%%F" >nul
+    if errorlevel 1 (
+        echo ERROR: Seed %%~nxF failed.
+        set PGPASSWORD=
+        pause
+        exit /b 1
+    )
 )
+set PGPASSWORD=
 echo   Seed data inserted.
 
 :: ── Install frontend dependencies ────────────────────────────

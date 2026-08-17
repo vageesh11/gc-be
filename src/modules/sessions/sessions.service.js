@@ -59,14 +59,34 @@ async function startSession(data, io) {
     if (table.status === 'RESERVED') {
       const existing = await sessionsRepo.findActiveByTableId(table_id);
       if (existing && existing.scheduled_start) {
-        const dt = new Date(existing.scheduled_start);
-        const formatted = dt.toLocaleString('en-IN', {
+        const reservedAt   = new Date(existing.scheduled_start);
+        const now          = new Date();
+        const minsUntilRes = Math.floor((reservedAt - now) / 60000);
+        const formatted    = reservedAt.toLocaleString('en-IN', {
           weekday: 'short', day: 'numeric', month: 'short',
           year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true,
         });
-        throw new AppError(`This table already has a booking on ${formatted}.`, 409);
+
+        // Allow a walk-in session only if there is enough time before the reservation
+        if (minsUntilRes <= 0) {
+          throw new AppError(`This table is reserved at ${formatted}. No time available for a new session.`, 409);
+        }
+        if (!booked_duration) {
+          throw new AppError(
+            `This table is reserved at ${formatted}. You must set a fixed duration that ends before then (max ${minsUntilRes} min).`,
+            409
+          );
+        }
+        if (booked_duration > minsUntilRes) {
+          throw new AppError(
+            `Session duration (${booked_duration} min) exceeds the time before the reservation at ${formatted} (${minsUntilRes} min available).`,
+            409
+          );
+        }
+        // Duration fits — allow the walk-in session to proceed (falls through to create)
+      } else {
+        throw new AppError('This table already has a pre-booking. Confirm or cancel it first.', 409);
       }
-      throw new AppError('This table already has a pre-booking. Confirm or cancel it first.', 409);
     }
   }
 
@@ -294,9 +314,16 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
       client
     );
 
+    // If there is still a pending pre-booking (reserved session) on this table,
+    // restore the table to RESERVED instead of AVAILABLE.
+    const pendingReservation = await sessionsRepo.findActiveByTableId(session.table_id);
+    const nextTableStatus = (pendingReservation && pendingReservation.status === 'reserved')
+      ? 'RESERVED'
+      : 'AVAILABLE';
+
     await client.query(
-      `UPDATE gaming_tables SET status = 'AVAILABLE' WHERE id = $1`,
-      [session.table_id]
+      `UPDATE gaming_tables SET status = $1 WHERE id = $2`,
+      [nextTableStatus, session.table_id]
     );
 
     await client.query('COMMIT');
@@ -306,7 +333,7 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
 
     if (io) {
       io.emit('session_ended', { sessionId, tableId: session.table_id, duration: billable, netAmount: net_amount });
-      io.emit('table_status_changed', { tableId: session.table_id, status: 'AVAILABLE' });
+      io.emit('table_status_changed', { tableId: session.table_id, status: nextTableStatus });
     }
 
     return ended;

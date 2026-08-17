@@ -17,9 +17,9 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 :: ── Write startup timestamp ──────────────────────────────────
 echo [%DATE% %TIME%] Gaming Cafe starting... >> "%LOG_DIR%\startup.log"
 
-:: ── Kill anything already on port 3000 or 4173 ──────────────
-for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":3000 "') do taskkill /PID %%A /F >nul 2>&1
-for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173 "') do taskkill /PID %%A /F >nul 2>&1
+:: ── Kill anything already LISTENING on port 3000 or 4173 ─────
+for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":3000.*LISTENING"') do taskkill /PID %%A /F >nul 2>&1
+for /f "tokens=5" %%A in ('netstat -ano 2^>nul ^| findstr ":4173.*LISTENING"') do taskkill /PID %%A /F >nul 2>&1
 
 :: Wait 2 seconds for any cleanup
 ping -n 3 127.0.0.1 >nul

@@ -23,8 +23,8 @@
   </Triggers>
   <Principals>
     <Principal id="Author">
-      <!-- Change this to your Windows username -->
-      <UserId>YOUR_WINDOWS_USERNAME</UserId>
+      <!-- Windows username for this machine -->
+      <UserId>Pramod</UserId>
       <LogonType>InteractiveToken</LogonType>
       <RunLevel>HighestAvailable</RunLevel>
     </Principal>
@@ -38,7 +38,7 @@
   </Settings>
   <Actions Context="Author">
     <Exec>
-      <Command>C:\gc-be\windows\start-cafe.bat</Command>
+      <Command>C:\Users\Pramod\gc-be\windows\start-cafe.bat</Command>
     </Exec>
   </Actions>
 </Task>
