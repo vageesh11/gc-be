@@ -173,7 +173,7 @@ async function cancelReservedSession(id, client) {
 async function endSession(
   id,
   { endTime, duration, sessionAmount, totalAmount, discountAmount, netAmount,
-    cashAmount, onlineAmount },
+    cashAmount, onlineAmount, discountType, discountValue, discountScope },
   client
 ) {
   const runner = client || db;
@@ -187,11 +187,14 @@ async function endSession(
          net_amount      = $6,
          cash_amount     = $7,
          online_amount   = $8,
+         discount_type   = $9,
+         discount_value  = $10,
+         discount_scope  = $11,
          status          = 'ended'
-     WHERE id = $9
+     WHERE id = $12
      RETURNING id, table_id, customer_id, start_time, end_time, duration,
                booking_type, session_amount, total_amount,
-               discount_type, discount_value, discount_amount, net_amount,
+               discount_type, discount_value, discount_scope, discount_amount, net_amount,
                cash_amount, online_amount,
                CASE
                  WHEN cash_amount > 0 AND online_amount = 0 THEN 'cash'
@@ -201,7 +204,7 @@ async function endSession(
                END AS payment_method,
                status, updated_at`,
     [endTime, duration, sessionAmount, totalAmount, discountAmount, netAmount,
-     cashAmount, onlineAmount, id]
+     cashAmount, onlineAmount, discountType, discountValue, discountScope, id]
   );
   return rows[0] || null;
 }

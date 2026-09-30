@@ -255,7 +255,7 @@ async function cancelPreBooking(sessionId, io) {
   }
 }
 
-async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
+async function endSession(sessionId, { cashAmount, onlineAmount, discountType, discountValue, discountScope }, io) {
   const session = await sessionsRepo.findById(sessionId);
   if (!session) throw new AppError(`Session with id ${sessionId} not found.`, 404);
   if (session.end_time) throw new AppError('Session has already ended.', 400);
@@ -265,6 +265,12 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
   if (session.status === 'paused') {
     throw new AppError('Session is paused. Resume it before ending.', 400);
   }
+
+  // A discount chosen at end-session overrides the one stored on the session
+  // (which is only ever set at creation). Falls back to the session's values.
+  const effDiscountType  = discountType  ?? session.discount_type  ?? 'none';
+  const effDiscountValue = discountValue ?? session.discount_value ?? 0;
+  const effDiscountScope = discountScope ?? session.discount_scope ?? 'all';
 
   const endTime = new Date();
 
@@ -288,7 +294,7 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
 
   const { discount_amount, net_amount: rawNetAmount } = applyDiscount(
     sessionAmount, ordersTotal,
-    session.discount_type, session.discount_value, session.discount_scope || 'all'
+    effDiscountType, effDiscountValue, effDiscountScope
   );
 
   // Round net_amount to the nearest ₹5 — stored in DB as the final billed amount.
@@ -299,7 +305,7 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
   try {
     await client.query('BEGIN');
 
-    if (session.discount_type === 'pass' && session.customer_pass_id) {
+    if (effDiscountType === 'pass' && session.customer_pass_id) {
       const deducted = await passesRepo.deductPassMinutes(
         session.customer_pass_id, billable, client
       );
@@ -310,7 +316,8 @@ async function endSession(sessionId, { cashAmount, onlineAmount }, io) {
       sessionId,
       { endTime, duration: billable, sessionAmount, totalAmount,
         discountAmount: discount_amount, netAmount: net_amount,
-        cashAmount, onlineAmount },
+        cashAmount, onlineAmount,
+        discountType: effDiscountType, discountValue: effDiscountValue, discountScope: effDiscountScope },
       client
     );
 

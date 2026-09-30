@@ -26,10 +26,19 @@ async function cancelPreBooking(req, res, next) {
 
 async function endSession(req, res, next) {
   try {
-    const { session_id, cash_amount, online_amount } = req.body;
+    const {
+      session_id, cash_amount, online_amount,
+      discount_type, discount_value, discount_scope,
+    } = req.body;
     const session = await sessionsService.endSession(
       Number(session_id),
-      { cashAmount: cash_amount, onlineAmount: online_amount },
+      {
+        cashAmount: cash_amount,
+        onlineAmount: online_amount,
+        discountType: discount_type,
+        discountValue: discount_value,
+        discountScope: discount_scope,
+      },
       req.io
     );
     return res.status(200).json({ status: 'success', data: session });

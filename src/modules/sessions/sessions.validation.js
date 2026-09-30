@@ -58,6 +58,7 @@ const endSession = Joi.object({
   online_amount: Joi.number().min(0).precision(2).default(0),
   discount_type:  Joi.string().valid(...DISCOUNT_TYPES).optional(),
   discount_value: Joi.number().min(0).optional(),
+  discount_scope: Joi.string().valid('session', 'order', 'all').optional(),
 });
 
 const pauseSession = Joi.object({
