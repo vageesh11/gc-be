@@ -37,4 +37,38 @@ async function createSnackOrder(req, res, next) {
   }
 }
 
-module.exports = { createOrder, createSnackOrder, getOrdersBySession };
+async function createSnackOrderBatch(req, res, next) {
+  try {
+    const orders = await ordersService.createSnackOrderBatch(req.body);
+    return res.status(201).json({ status: 'success', data: orders });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function getOpenSnackOrders(req, res, next) {
+  try {
+    const orders = await ordersService.getOpenSnackOrders();
+    return res.status(200).json({ status: 'success', data: orders });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+async function closeSnackOrders(req, res, next) {
+  try {
+    const orders = await ordersService.closeSnackOrders(req.body.order_ids, req.body.payment_method);
+    return res.status(200).json({ status: 'success', data: orders });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+module.exports = {
+  createOrder,
+  createSnackOrder,
+  createSnackOrderBatch,
+  getOrdersBySession,
+  getOpenSnackOrders,
+  closeSnackOrders,
+};

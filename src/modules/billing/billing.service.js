@@ -50,11 +50,16 @@ async function getBill(sessionId) {
       net_amount:       session.net_amount,
       cash_amount:      session.cash_amount,
       online_amount:    session.online_amount,
+      additional_discount: session.additional_discount,
       payment_method:   session.payment_method,
       status:           'CLOSED',
       pauses,
       orders,
-      frames,
+      frames: frames.map((frame) => ({
+        ...frame,
+        actual_amount: frame.amount,
+        discounted_amount: frame.amount,
+      })),
     };
   }
 
@@ -104,11 +109,17 @@ async function getBill(sessionId) {
     net_amount,
     cash_amount:      null,
     online_amount:    null,
+    additional_discount: 0,
+    cash_amount:      null,
     payment_method:   null,
     status:           session.status === 'paused' ? 'PAUSED' : 'ACTIVE',
     pauses,
     orders,
-    frames,
+    frames: frames.map((frame) => ({
+      ...frame,
+      actual_amount: frame.amount,
+      discounted_amount: frame.amount,
+    })),
   };
 }
 

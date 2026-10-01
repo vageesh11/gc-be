@@ -59,7 +59,14 @@ const endSession = Joi.object({
   discount_type:  Joi.string().valid(...DISCOUNT_TYPES).optional(),
   discount_value: Joi.number().min(0).optional(),
   discount_scope: Joi.string().valid('session', 'order', 'all').optional(),
-});
+  start_time:     Joi.date().iso().optional(),
+  end_time:       Joi.date().iso().optional(),
+}).custom((value, helpers) => {
+  if (value.start_time && value.end_time && value.end_time <= value.start_time) {
+    return helpers.error('any.invalid');
+  }
+  return value;
+}).messages({ 'any.invalid': 'end_time must be after start_time.' });
 
 const pauseSession = Joi.object({
   session_id: Joi.number().integer().positive().required(),
@@ -70,13 +77,9 @@ const resumeSession = Joi.object({
 });
 
 const updatePayment = Joi.object({
-  cash_amount:   Joi.number().min(0).precision(2).required(),
-  online_amount: Joi.number().min(0).precision(2).required(),
-}).custom((val, helpers) => {
-  if (val.cash_amount === 0 && val.online_amount === 0) {
-    return helpers.error('any.invalid');
-  }
-  return val;
-}).messages({ 'any.invalid': 'cash_amount and online_amount cannot both be zero.' });
+  cash_amount:          Joi.number().min(0).precision(2).required(),
+  online_amount:        Joi.number().min(0).precision(2).required(),
+  additional_discount:  Joi.number().min(0).precision(2).default(0),
+});
 
 module.exports = { startSession, endSession, pauseSession, resumeSession, updatePayment };

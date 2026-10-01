@@ -22,6 +22,7 @@ async function fetchSessionsInRange(from, to) {
        s.net_amount,
        s.cash_amount,
        s.online_amount,
+       s.additional_discount,
        CASE
          WHEN s.cash_amount > 0 AND s.online_amount = 0 THEN 'cash'
          WHEN s.cash_amount = 0 AND s.online_amount > 0 THEN 'online'
@@ -54,15 +55,20 @@ async function fetchOrdersInRange(from, to) {
        i.name       AS item_name,
        o.quantity,
        o.unit_price,
+       o.buy_in_price,
+       o.mrp,
+       o.selling_price,
        o.subtotal,
-       o.created_at
+       o.created_at,
+       (o.quantity * COALESCE(o.buy_in_price, 0)) AS total_cost,
+       (o.subtotal - (o.quantity * COALESCE(o.buy_in_price, 0))) AS total_profit
      FROM orders o
-     JOIN sessions s ON s.id = o.session_id
+     LEFT JOIN sessions s ON s.id = o.session_id
      JOIN inventory i ON i.id = o.item_id
-     WHERE s.end_time IS NOT NULL
-       AND s.start_time >= $1
-       AND s.start_time <  $2
-     ORDER BY o.session_id, o.created_at`,
+     WHERE (s.end_time IS NOT NULL OR (o.session_id IS NULL AND o.closed_at IS NOT NULL))
+       AND COALESCE(s.start_time, o.closed_at) >= $1
+       AND COALESCE(s.start_time, o.closed_at) <  $2
+     ORDER BY o.session_id NULLS LAST, o.created_at`, 
     [from, to]
   );
   return rows;
@@ -76,24 +82,39 @@ async function fetchSummaryInRange(from, to) {
     `SELECT
        COUNT(*)                          AS total_sessions,
        COALESCE(SUM(s.duration), 0)     AS total_minutes,
-       COALESCE(SUM(s.net_amount), 0)   AS total_revenue,
+       COALESCE(SUM(s.net_amount), 0) + (SELECT COALESCE(SUM(o.subtotal), 0) FROM orders o WHERE o.session_id IS NULL AND o.closed_at IS NOT NULL AND o.closed_at >= $1 AND o.closed_at < $2) AS total_revenue,
        COALESCE(SUM(s.discount_amount),0) AS total_discounts,
+       COALESCE(SUM(s.additional_discount),0) AS additional_discounts,
        COALESCE(SUM(s.session_amount), 0) AS table_revenue,
        (SELECT COALESCE(SUM(o.subtotal),0)
         FROM orders o
-        JOIN sessions s2 ON s2.id = o.session_id
-        WHERE s2.end_time IS NOT NULL
-          AND s2.start_time >= $1
-          AND s2.start_time < $2
+        LEFT JOIN sessions s2 ON s2.id = o.session_id
+        WHERE (s2.end_time IS NOT NULL OR (o.session_id IS NULL AND o.closed_at IS NOT NULL))
+          AND COALESCE(s2.start_time, o.closed_at) >= $1
+          AND COALESCE(s2.start_time, o.closed_at) < $2
        )                                 AS orders_revenue,
+       (SELECT COALESCE(SUM(o.quantity * COALESCE(o.buy_in_price, 0)),0)
+        FROM orders o
+        LEFT JOIN sessions s2 ON s2.id = o.session_id
+        WHERE (s2.end_time IS NOT NULL OR (o.session_id IS NULL AND o.closed_at IS NOT NULL))
+          AND COALESCE(s2.start_time, o.closed_at) >= $1
+          AND COALESCE(s2.start_time, o.closed_at) < $2
+       ) AS orders_cost,
+       (SELECT COALESCE(SUM(o.subtotal - (o.quantity * COALESCE(o.buy_in_price, 0))),0)
+        FROM orders o
+        LEFT JOIN sessions s2 ON s2.id = o.session_id
+        WHERE (s2.end_time IS NOT NULL OR (o.session_id IS NULL AND o.closed_at IS NOT NULL))
+          AND COALESCE(s2.start_time, o.closed_at) >= $1
+          AND COALESCE(s2.start_time, o.closed_at) < $2
+       ) AS orders_profit,
        COUNT(*) FILTER (WHERE s.booking_type = 'pay_as_you_go') AS payg_count,
        COUNT(*) FILTER (WHERE s.booking_type = 'fixed_slot')    AS fixed_count,
        COUNT(*) FILTER (WHERE s.booking_type = 'pre_booking')   AS prebook_count,
-       COUNT(*) FILTER (WHERE s.cash_amount > 0 AND s.online_amount = 0) AS cash_count,
-       COUNT(*) FILTER (WHERE s.cash_amount = 0 AND s.online_amount > 0) AS online_count,
+       COUNT(*) FILTER (WHERE s.cash_amount > 0 AND s.online_amount = 0) + (SELECT COUNT(DISTINCT o.snack_order_ref) FROM orders o WHERE o.session_id IS NULL AND o.closed_at IS NOT NULL AND o.payment_method = 'cash' AND o.closed_at >= $1 AND o.closed_at < $2) AS cash_count,
+       COUNT(*) FILTER (WHERE s.cash_amount = 0 AND s.online_amount > 0) + (SELECT COUNT(DISTINCT o.snack_order_ref) FROM orders o WHERE o.session_id IS NULL AND o.closed_at IS NOT NULL AND o.payment_method = 'online' AND o.closed_at >= $1 AND o.closed_at < $2) AS online_count,
        COUNT(*) FILTER (WHERE s.cash_amount > 0 AND s.online_amount > 0) AS split_count,
-       COALESCE(SUM(s.cash_amount),   0) AS cash_revenue,
-       COALESCE(SUM(s.online_amount), 0) AS online_revenue
+       COALESCE(SUM(s.cash_amount), 0) + (SELECT COALESCE(SUM(o.subtotal), 0) FROM orders o WHERE o.session_id IS NULL AND o.closed_at IS NOT NULL AND o.payment_method = 'cash' AND o.closed_at >= $1 AND o.closed_at < $2) AS cash_revenue,
+       COALESCE(SUM(s.online_amount), 0) + (SELECT COALESCE(SUM(o.subtotal), 0) FROM orders o WHERE o.session_id IS NULL AND o.closed_at IS NOT NULL AND o.payment_method = 'online' AND o.closed_at >= $1 AND o.closed_at < $2) AS online_revenue
      FROM sessions s
      WHERE s.end_time IS NOT NULL
        AND s.start_time >= $1
@@ -134,13 +155,15 @@ async function fetchTopItemsInRange(from, to) {
     `SELECT
        i.name                        AS item_name,
        SUM(o.quantity)               AS total_qty,
-       COALESCE(SUM(o.subtotal), 0)  AS total_revenue
+       COALESCE(SUM(o.subtotal), 0)  AS total_revenue,
+       COALESCE(SUM(o.quantity * COALESCE(o.buy_in_price, 0)), 0) AS total_cost,
+       COALESCE(SUM(o.subtotal - (o.quantity * COALESCE(o.buy_in_price, 0))), 0) AS total_profit
      FROM orders o
-     JOIN sessions s ON s.id = o.session_id
+     LEFT JOIN sessions s ON s.id = o.session_id
      JOIN inventory i ON i.id = o.item_id
-     WHERE s.end_time IS NOT NULL
-       AND s.start_time >= $1
-       AND s.start_time <  $2
+     WHERE (s.end_time IS NOT NULL OR (o.session_id IS NULL AND o.closed_at IS NOT NULL))
+       AND COALESCE(s.start_time, o.closed_at) >= $1
+       AND COALESCE(s.start_time, o.closed_at) <  $2
      GROUP BY i.id, i.name
      ORDER BY total_revenue DESC
      LIMIT 10`,

@@ -66,7 +66,10 @@ function buildSummary(raw, minutes) {
     total_revenue:   parseFloat(raw.total_revenue).toFixed(2),
     table_revenue:   parseFloat(raw.table_revenue).toFixed(2),
     orders_revenue:  parseFloat(raw.orders_revenue).toFixed(2),
+    orders_cost:     parseFloat(raw.orders_cost || 0).toFixed(2),
+    orders_profit:   parseFloat(raw.orders_profit || 0).toFixed(2),
     total_discounts: parseFloat(raw.total_discounts).toFixed(2),
+    additional_discounts: parseFloat(raw.additional_discounts || 0).toFixed(2),
     // booking types
     payg_count:    Number(raw.payg_count),
     fixed_count:   Number(raw.fixed_count),
@@ -141,7 +144,8 @@ async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topI
     ['Gross Revenue (₹)',       parseFloat(summary.total_revenue).toFixed(2)],
     ['Table Revenue (₹)',       parseFloat(summary.table_revenue).toFixed(2)],
     ['Snacks & Drinks (₹)',     parseFloat(summary.orders_revenue).toFixed(2)],
-    ['Total Discounts (₹)',     parseFloat(summary.total_discounts).toFixed(2)],
+    ['Offer Discounts (₹)',     parseFloat(summary.total_discounts).toFixed(2)],
+    ['Additional Discounts (₹)', parseFloat(summary.additional_discounts).toFixed(2)],
     ['', ''],
     ['Payment Method — Cash',   summary.cash_count + ' sessions  ₹' + parseFloat(summary.cash_revenue).toFixed(2)],
     ['Payment Method — Online', summary.online_count + ' sessions  ₹' + parseFloat(summary.online_revenue).toFixed(2)],
@@ -177,7 +181,8 @@ async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topI
     { header: 'Duration (min)',   key: 'duration_min',    width: 16 },
     { header: 'Session Amt (₹)',  key: 'session_amount',  width: 16 },
     { header: 'Total Amt (₹)',    key: 'total_amount',    width: 16 },
-    { header: 'Discount (₹)',     key: 'discount_amount', width: 14 },
+    { header: 'Offer Discount (₹)', key: 'discount_amount', width: 16 },
+    { header: 'Additional Discount (₹)', key: 'additional_discount', width: 22 },
     { header: 'Net Amount (₹)',   key: 'net_amount',      width: 14 },
     { header: 'Discount Type',    key: 'discount_type',   width: 14 },
   ]);
@@ -199,6 +204,7 @@ async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topI
       session_amount: parseFloat(s.session_amount  || 0).toFixed(2),
       total_amount:   parseFloat(s.total_amount    || 0).toFixed(2),
       discount_amount: parseFloat(s.discount_amount || 0).toFixed(2),
+      additional_discount: parseFloat(s.additional_discount || 0).toFixed(2),
       net_amount:     parseFloat(s.net_amount      || 0).toFixed(2),
       discount_type:  s.discount_type,
     });
@@ -233,12 +239,16 @@ async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topI
     { header: 'Item',         key: 'item_name',     width: 26 },
     { header: 'Qty Sold',     key: 'total_qty',     width: 12 },
     { header: 'Revenue (₹)',  key: 'total_revenue', width: 16 },
+    { header: 'Cost (₹)',     key: 'total_cost', width: 16 },
+    { header: 'Profit (₹)',   key: 'total_profit', width: 16 },
   ]);
   topItems.forEach(r => {
     wsItems.addRow({
       item_name:     r.item_name,
       total_qty:     Number(r.total_qty),
       total_revenue: parseFloat(r.total_revenue).toFixed(2),
+      total_cost: parseFloat(r.total_cost || 0).toFixed(2),
+      total_profit: parseFloat(r.total_profit || 0).toFixed(2),
     });
   });
   styleDataRows(wsItems, 2);
@@ -251,6 +261,8 @@ async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topI
     { header: 'Qty',            key: 'quantity',   width: 8 },
     { header: 'Unit Price (₹)', key: 'unit_price', width: 14 },
     { header: 'Subtotal (₹)',   key: 'subtotal',   width: 14 },
+    { header: 'Cost (₹)',       key: 'total_cost', width: 14 },
+    { header: 'Profit (₹)',     key: 'total_profit', width: 14 },
     { header: 'Time',           key: 'created_at', width: 22 },
   ]);
   orders.forEach(o => {
@@ -260,6 +272,8 @@ async function buildExcelWorkbook(label, summary, sessions, tableBreakdown, topI
       quantity:   Number(o.quantity),
       unit_price: parseFloat(o.unit_price).toFixed(2),
       subtotal:   parseFloat(o.subtotal).toFixed(2),
+      total_cost: parseFloat(o.total_cost || 0).toFixed(2),
+      total_profit: parseFloat(o.total_profit || 0).toFixed(2),
       created_at: new Date(o.created_at).toLocaleString('en-IN'),
     });
   });
@@ -295,6 +309,8 @@ async function getDailyReport(dateStr) {
       item_name:     r.item_name,
       total_qty:     Number(r.total_qty),
       total_revenue: parseFloat(r.total_revenue).toFixed(2),
+      total_cost: parseFloat(r.total_cost || 0).toFixed(2),
+      total_profit: parseFloat(r.total_profit || 0).toFixed(2),
     })),
     sessions,
   };
@@ -342,6 +358,8 @@ async function getWeeklyReport(weekStartStr) {
       item_name:     r.item_name,
       total_qty:     Number(r.total_qty),
       total_revenue: parseFloat(r.total_revenue).toFixed(2),
+      total_cost: parseFloat(r.total_cost || 0).toFixed(2),
+      total_profit: parseFloat(r.total_profit || 0).toFixed(2),
     })),
     sessions,
   };
@@ -389,6 +407,8 @@ async function getMonthlyReport(yearMonth) {
       item_name:     r.item_name,
       total_qty:     Number(r.total_qty),
       total_revenue: parseFloat(r.total_revenue).toFixed(2),
+      total_cost: parseFloat(r.total_cost || 0).toFixed(2),
+      total_profit: parseFloat(r.total_profit || 0).toFixed(2),
     })),
     sessions,
   };

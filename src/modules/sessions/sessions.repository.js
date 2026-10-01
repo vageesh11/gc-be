@@ -40,7 +40,7 @@ async function findById(id) {
             s.booking_type, s.booked_duration, s.scheduled_start,
             s.discount_type, s.discount_value, s.discount_scope, s.discount_amount,
             s.session_amount, s.total_amount, s.net_amount,
-            s.cash_amount, s.online_amount,
+            s.cash_amount, s.online_amount, s.additional_discount,
             ${PAYMENT_METHOD_EXPR},
             s.created_at, s.updated_at,
             t.name            AS table_name,
@@ -105,7 +105,7 @@ async function findAll({ status, table_id, date, limit = 50, offset = 0 } = {}) 
     'SELECT s.id, s.table_id, s.customer_id, s.start_time, s.end_time,' +
     ' s.duration, s.booking_type, s.status, s.scheduled_start,' +
     ' s.session_amount, s.total_amount, s.net_amount,' +
-    ' s.cash_amount, s.online_amount,' +
+    ' s.cash_amount, s.online_amount, s.additional_discount,' +
     ' ' + PAYMENT_METHOD_EXPR + ', s.created_at,' +
     ' t.name AS table_name, t.type AS table_type,' +
     ' c.name AS customer_name, c.phone AS customer_phone' +
@@ -172,26 +172,27 @@ async function cancelReservedSession(id, client) {
 
 async function endSession(
   id,
-  { endTime, duration, sessionAmount, totalAmount, discountAmount, netAmount,
+  { startTime, endTime, duration, sessionAmount, totalAmount, discountAmount, netAmount,
     cashAmount, onlineAmount, discountType, discountValue, discountScope },
   client
 ) {
   const runner = client || db;
   const { rows } = await runner.query(
     `UPDATE sessions
-     SET end_time        = $1,
-         duration        = $2,
-         session_amount  = $3,
-         total_amount    = $4,
-         discount_amount = $5,
-         net_amount      = $6,
-         cash_amount     = $7,
-         online_amount   = $8,
-         discount_type   = $9,
-         discount_value  = $10,
-         discount_scope  = $11,
+     SET start_time      = $1,
+         end_time        = $2,
+         duration        = $3,
+         session_amount  = $4,
+         total_amount    = $5,
+         discount_amount = $6,
+         net_amount      = $7,
+         cash_amount     = $8,
+         online_amount   = $9,
+         discount_type   = $10,
+         discount_value  = $11,
+         discount_scope  = $12,
          status          = 'ended'
-     WHERE id = $12
+     WHERE id = $13
      RETURNING id, table_id, customer_id, start_time, end_time, duration,
                booking_type, session_amount, total_amount,
                discount_type, discount_value, discount_scope, discount_amount, net_amount,
@@ -203,7 +204,7 @@ async function endSession(
                  ELSE NULL
                END AS payment_method,
                status, updated_at`,
-    [endTime, duration, sessionAmount, totalAmount, discountAmount, netAmount,
+    [startTime, endTime, duration, sessionAmount, totalAmount, discountAmount, netAmount,
      cashAmount, onlineAmount, discountType, discountValue, discountScope, id]
   );
   return rows[0] || null;
@@ -244,20 +245,22 @@ async function findPausesBySessionId(sessionId) {
   return rows;
 }
 
-async function updatePayment(id, { cashAmount, onlineAmount }) {
+async function updatePayment(id, { cashAmount, onlineAmount, additionalDiscount = 0, netAmount }) {
   const { rows } = await db.query(
     `UPDATE sessions
-     SET cash_amount   = $1,
-         online_amount = $2
-     WHERE id = $3
-     RETURNING id, cash_amount, online_amount,
+     SET cash_amount        = $1,
+         online_amount      = $2,
+         additional_discount = $3,
+         net_amount         = $4
+     WHERE id = $5
+     RETURNING id, cash_amount, online_amount, additional_discount, net_amount,
        CASE
          WHEN cash_amount > 0 AND online_amount = 0 THEN 'cash'
          WHEN cash_amount = 0 AND online_amount > 0 THEN 'online'
          WHEN cash_amount > 0 AND online_amount > 0 THEN 'split'
          ELSE NULL
        END AS payment_method`,
-    [cashAmount, onlineAmount, id]
+    [cashAmount, onlineAmount, additionalDiscount, netAmount, id]
   );
   return rows[0] || null;
 }

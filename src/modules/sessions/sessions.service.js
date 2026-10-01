@@ -255,7 +255,7 @@ async function cancelPreBooking(sessionId, io) {
   }
 }
 
-async function endSession(sessionId, { cashAmount, onlineAmount, discountType, discountValue, discountScope }, io) {
+async function endSession(sessionId, { cashAmount, onlineAmount, discountType, discountValue, discountScope, startTime, endTime: requestedEndTime }, io) {
   const session = await sessionsRepo.findById(sessionId);
   if (!session) throw new AppError(`Session with id ${sessionId} not found.`, 404);
   if (session.end_time) throw new AppError('Session has already ended.', 400);
@@ -272,7 +272,21 @@ async function endSession(sessionId, { cashAmount, onlineAmount, discountType, d
   const effDiscountValue = discountValue ?? session.discount_value ?? 0;
   const effDiscountScope = discountScope ?? session.discount_scope ?? 'all';
 
-  const endTime = new Date();
+  function applyTime(value, reference) {
+    const [hours, minutes] = value.split(':').map(Number);
+    const date = new Date(reference);
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  }
+
+  const effectiveStartTime = startTime ? new Date(startTime) : new Date(session.start_time);
+  const endTime = requestedEndTime ? new Date(requestedEndTime) : new Date();
+  if (Number.isNaN(effectiveStartTime.getTime()) || Number.isNaN(endTime.getTime())) {
+    throw new AppError('Start time and end time must be valid times.', 400);
+  }
+  if (endTime <= effectiveStartTime) {
+    throw new AppError('End time must be after start time.', 400);
+  }
 
   let billable;
   let sessionAmount;
@@ -284,7 +298,7 @@ async function endSession(sessionId, { cashAmount, onlineAmount, discountType, d
     sessionAmount = parseFloat(summary.total_amount).toFixed(2);
   } else {
     const pauses = await sessionsRepo.findPausesBySessionId(sessionId);
-    billable      = calcBillableMinutes(session.start_time, endTime, pauses);
+    billable      = calcBillableMinutes(effectiveStartTime, endTime, pauses);
     sessionAmount = roundToNearest5(calcSessionCost(billable, session.price_per_minute));
   }
 
@@ -314,7 +328,7 @@ async function endSession(sessionId, { cashAmount, onlineAmount, discountType, d
 
     const ended = await sessionsRepo.endSession(
       sessionId,
-      { endTime, duration: billable, sessionAmount, totalAmount,
+      { startTime: effectiveStartTime, endTime, duration: billable, sessionAmount, totalAmount,
         discountAmount: discount_amount, netAmount: net_amount,
         cashAmount, onlineAmount,
         discountType: effDiscountType, discountValue: effDiscountValue, discountScope: effDiscountScope },
@@ -413,11 +427,23 @@ async function getSessionById(sessionId)  {
 }
 async function getAllSessions(filters)    { return sessionsRepo.findAll(filters); }
 
-async function updatePayment(sessionId, { cashAmount, onlineAmount }) {
+async function updatePayment(sessionId, { cashAmount, onlineAmount, additionalDiscount = 0 }) {
   const session = await sessionsRepo.findById(sessionId);
   if (!session) throw new AppError(`Session with id ${sessionId} not found.`, 404);
   if (session.status !== 'ended') throw new AppError('Payment can only be edited on closed sessions.', 400);
-  const updated = await sessionsRepo.updatePayment(sessionId, { cashAmount, onlineAmount });
+  const currentNetAmount = Number(session.net_amount || 0);
+  const previousAdditionalDiscount = Number(session.additional_discount || 0);
+  const correctedNetAmount = Math.max(0, currentNetAmount + previousAdditionalDiscount - Number(additionalDiscount));
+  const totalPaid = Number(cashAmount) + Number(onlineAmount) + Number(additionalDiscount);
+  if (Math.abs(totalPaid - correctedNetAmount) > 0.01) {
+    throw new AppError(`Payment and additional discount must total ₹${correctedNetAmount}.`, 400);
+  }
+  const updated = await sessionsRepo.updatePayment(sessionId, {
+    cashAmount,
+    onlineAmount,
+    additionalDiscount,
+    netAmount: correctedNetAmount,
+  });
   return updated;
 }
 

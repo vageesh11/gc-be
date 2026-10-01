@@ -28,7 +28,7 @@ async function endSession(req, res, next) {
   try {
     const {
       session_id, cash_amount, online_amount,
-      discount_type, discount_value, discount_scope,
+      discount_type, discount_value, discount_scope, start_time, end_time,
     } = req.body;
     const session = await sessionsService.endSession(
       Number(session_id),
@@ -38,6 +38,8 @@ async function endSession(req, res, next) {
         discountType: discount_type,
         discountValue: discount_value,
         discountScope: discount_scope,
+        startTime: start_time,
+        endTime: end_time,
       },
       req.io
     );
@@ -96,10 +98,10 @@ async function getAllSessions(req, res, next) {
 
 async function updatePayment(req, res, next) {
   try {
-    const { cash_amount, online_amount } = req.body;
+    const { cash_amount, online_amount, additional_discount } = req.body;
     const result = await sessionsService.updatePayment(
       Number(req.params.id),
-      { cashAmount: cash_amount, onlineAmount: online_amount }
+      { cashAmount: cash_amount, onlineAmount: online_amount, additionalDiscount: additional_discount }
     );
     return res.status(200).json({ status: 'success', data: result });
   } catch (err) { return next(err); }
