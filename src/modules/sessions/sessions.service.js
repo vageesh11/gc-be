@@ -434,9 +434,10 @@ async function updatePayment(sessionId, { cashAmount, onlineAmount, additionalDi
   const currentNetAmount = Number(session.net_amount || 0);
   const previousAdditionalDiscount = Number(session.additional_discount || 0);
   const correctedNetAmount = Math.max(0, currentNetAmount + previousAdditionalDiscount - Number(additionalDiscount));
-  const totalPaid = Number(cashAmount) + Number(onlineAmount) + Number(additionalDiscount);
-  if (Math.abs(totalPaid - correctedNetAmount) > 0.01) {
-    throw new AppError(`Payment and additional discount must total ₹${correctedNetAmount}.`, 400);
+  const amountToCollect = correctedNetAmount;
+  const totalPaid = Number(cashAmount) + Number(onlineAmount);
+  if (Math.abs(totalPaid - amountToCollect) > 0.01) {
+    throw new AppError(`Cash and online payment must total ₹${amountToCollect}.`, 400);
   }
   const updated = await sessionsRepo.updatePayment(sessionId, {
     cashAmount,
